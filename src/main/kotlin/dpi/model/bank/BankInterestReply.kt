@@ -7,4 +7,4 @@ import java.io.Serializable
  * to a loan request of the specific client
  *
  */
-data class BankInterestReply (val interest: Double = 0.toDouble(), val quoteId: String? = null, val bankInterestRequest: BankInterestRequest? = null) : Serializable
+data class BankInterestReply(val interest: Double = 0.toDouble(), val quoteId: String? = null, val brokerRef: String) : Serializable

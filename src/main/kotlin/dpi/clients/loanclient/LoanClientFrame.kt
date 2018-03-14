@@ -1,43 +1,36 @@
 package dpi.clients.loanclient
 
-import com.google.gson.Gson
 import com.rabbitmq.client.Channel
 import com.rabbitmq.client.ConnectionFactory
 import com.rabbitmq.client.DeliverCallback
-import dpi.clients.loanbroker.LoanBrokerFrame
+import dpi.clients.loanbroker.LoanBrokerManager
+import dpi.model.deserialize
+import dpi.model.loan.LoanReply
 import dpi.model.loan.LoanRequest
+import dpi.model.serialize
 import java.awt.EventQueue
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
-
-import javax.swing.DefaultListModel
-import javax.swing.JButton
-import javax.swing.JFrame
-import javax.swing.JLabel
-import javax.swing.JList
-import javax.swing.JPanel
-import javax.swing.JScrollPane
-import javax.swing.JTextField
+import java.util.*
+import javax.swing.*
 import javax.swing.border.EmptyBorder
-
-import dpi.requestreply.RequestReply
-import dpi.model.loan.LoanReply
-import dpi.requestreply.serialize
 
 class LoanClientFrame : JFrame() {
     private val contentPane: JPanel
-    private val tfSSN: JTextField
-    private val listModel = DefaultListModel<RequestReply<LoanRequest, LoanReply>>()
-    private val requestReplyList: JList<RequestReply<LoanRequest, LoanReply>>
+    private val ssnTextField: JTextField
+    private val listModel = DefaultListModel<LoanReply>()
+    private val requestReplyList: JList<LoanReply>
 
-    private val tfAmount: JTextField
-    private val lblNewLabel: JLabel
-    private val lblNewLabel_1: JLabel
-    private val tfTime: JTextField
+    private val amountTextField: JTextField
+    private val amountLabel: JLabel
+    private val timeLabel: JLabel
+    private val timeTextField: JTextField
 
-    private val loanRequestChannel: Channel? = null
-    private val loanReplyChannel: Channel? = null
+    private val loanRequestChannel: Channel
+    private val loanReplyChannel: Channel
+
+    private val ownRefs = mutableMapOf<String, LoanRequest>()
 
     /**
      * Create the frame.
@@ -46,6 +39,12 @@ class LoanClientFrame : JFrame() {
         val connectionFactory = ConnectionFactory()
         connectionFactory.host = "localhost"
         val rabbitMq = connectionFactory.newConnection()
+
+        this.loanRequestChannel = rabbitMq.createChannel()
+        this.loanRequestChannel.queueDeclare(LoanBrokerManager.LoanRequestChannel, false, false, false, null)
+
+        this.loanReplyChannel = rabbitMq.createChannel()
+        this.loanReplyChannel.queueDeclare(LoanBrokerManager.LoanReplyChannel, false, false, false, null)
 
         title = "Loan Client"
 
@@ -61,72 +60,74 @@ class LoanClientFrame : JFrame() {
         gbl_contentPane.rowWeights = doubleArrayOf(0.0, 0.0, 0.0, 0.0, java.lang.Double.MIN_VALUE)
         contentPane.layout = gbl_contentPane
 
-        val lblBody = JLabel("ssn")
-        val gbc_lblBody = GridBagConstraints()
-        gbc_lblBody.insets = Insets(0, 0, 5, 5)
-        gbc_lblBody.gridx = 0
-        gbc_lblBody.gridy = 0
-        contentPane.add(lblBody, gbc_lblBody)
+        val ssnLabel = JLabel("ssn")
+        val sslLAbelConstraints = GridBagConstraints()
+        sslLAbelConstraints.insets = Insets(0, 0, 5, 5)
+        sslLAbelConstraints.gridx = 0
+        sslLAbelConstraints.gridy = 0
+        contentPane.add(ssnLabel, sslLAbelConstraints)
 
-        tfSSN = JTextField()
-        val gbc_tfSSN = GridBagConstraints()
-        gbc_tfSSN.fill = GridBagConstraints.HORIZONTAL
-        gbc_tfSSN.insets = Insets(0, 0, 5, 5)
-        gbc_tfSSN.gridx = 1
-        gbc_tfSSN.gridy = 0
-        contentPane.add(tfSSN, gbc_tfSSN)
-        tfSSN.columns = 10
+        ssnTextField = JTextField()
+        val ssnTextFieldConstraints = GridBagConstraints()
+        ssnTextFieldConstraints.fill = GridBagConstraints.HORIZONTAL
+        ssnTextFieldConstraints.insets = Insets(0, 0, 5, 5)
+        ssnTextFieldConstraints.gridx = 1
+        ssnTextFieldConstraints.gridy = 0
+        contentPane.add(ssnTextField, ssnTextFieldConstraints)
+        ssnTextField.columns = 10
 
-        lblNewLabel = JLabel("amount")
-        val gbc_lblNewLabel = GridBagConstraints()
-        gbc_lblNewLabel.insets = Insets(0, 0, 5, 5)
-        gbc_lblNewLabel.anchor = GridBagConstraints.WEST
-        gbc_lblNewLabel.gridx = 0
-        gbc_lblNewLabel.gridy = 1
-        contentPane.add(lblNewLabel, gbc_lblNewLabel)
+        amountLabel = JLabel("amount")
+        val amountLabelConstraints = GridBagConstraints()
+        amountLabelConstraints.insets = Insets(0, 0, 5, 5)
+        amountLabelConstraints.anchor = GridBagConstraints.WEST
+        amountLabelConstraints.gridx = 0
+        amountLabelConstraints.gridy = 1
+        contentPane.add(amountLabel, amountLabelConstraints)
 
-        tfAmount = JTextField()
-        val gbc_tfAmount = GridBagConstraints()
-        gbc_tfAmount.anchor = GridBagConstraints.NORTH
-        gbc_tfAmount.insets = Insets(0, 0, 5, 5)
-        gbc_tfAmount.fill = GridBagConstraints.HORIZONTAL
-        gbc_tfAmount.gridx = 1
-        gbc_tfAmount.gridy = 1
-        contentPane.add(tfAmount, gbc_tfAmount)
-        tfAmount.columns = 10
+        amountTextField = JTextField()
+        val amountTextFieldConstraints = GridBagConstraints()
+        amountTextFieldConstraints.anchor = GridBagConstraints.NORTH
+        amountTextFieldConstraints.insets = Insets(0, 0, 5, 5)
+        amountTextFieldConstraints.fill = GridBagConstraints.HORIZONTAL
+        amountTextFieldConstraints.gridx = 1
+        amountTextFieldConstraints.gridy = 1
+        contentPane.add(amountTextField, amountTextFieldConstraints)
+        amountTextField.columns = 10
 
-        lblNewLabel_1 = JLabel("time")
-        val gbc_lblNewLabel_1 = GridBagConstraints()
-        gbc_lblNewLabel_1.anchor = GridBagConstraints.EAST
-        gbc_lblNewLabel_1.insets = Insets(0, 0, 5, 5)
-        gbc_lblNewLabel_1.gridx = 0
-        gbc_lblNewLabel_1.gridy = 2
-        contentPane.add(lblNewLabel_1, gbc_lblNewLabel_1)
+        timeLabel = JLabel("time")
+        val timeLabelConstraints = GridBagConstraints()
+        timeLabelConstraints.anchor = GridBagConstraints.EAST
+        timeLabelConstraints.insets = Insets(0, 0, 5, 5)
+        timeLabelConstraints.gridx = 0
+        timeLabelConstraints.gridy = 2
+        contentPane.add(timeLabel, timeLabelConstraints)
 
-        tfTime = JTextField()
-        val gbc_tfTime = GridBagConstraints()
-        gbc_tfTime.insets = Insets(0, 0, 5, 5)
-        gbc_tfTime.fill = GridBagConstraints.HORIZONTAL
-        gbc_tfTime.gridx = 1
-        gbc_tfTime.gridy = 2
-        contentPane.add(tfTime, gbc_tfTime)
-        tfTime.columns = 10
+        timeTextField = JTextField()
+        val timeTextFieldConstraints = GridBagConstraints()
+        timeTextFieldConstraints.insets = Insets(0, 0, 5, 5)
+        timeTextFieldConstraints.fill = GridBagConstraints.HORIZONTAL
+        timeTextFieldConstraints.gridx = 1
+        timeTextFieldConstraints.gridy = 2
+        contentPane.add(timeTextField, timeTextFieldConstraints)
+        timeTextField.columns = 10
 
-        val btnQueue = JButton("send loan request")
-        btnQueue.addActionListener {
-            val ssn = Integer.parseInt(tfSSN.text)
-            val amount = Integer.parseInt(tfAmount.text)
-            val time = Integer.parseInt(tfTime.text)
+        val queueBtn = JButton("send loan request")
+        queueBtn.addActionListener {
+            val ssn = Integer.parseInt(ssnTextField.text)
+            val amount = Integer.parseInt(amountTextField.text)
+            val time = Integer.parseInt(timeTextField.text)
 
-            val request = LoanRequest(ssn, amount, time)
-            listModel.addElement(RequestReply(request, null))
+            val uuid = UUID.randomUUID()
+            val request = LoanRequest(ssn, amount, time, uuid.toString())
+            this.ownRefs[uuid.toString()] = request
 
+            this.loanRequestChannel.basicPublish("", LoanBrokerManager.LoanRequestChannel, null, request.serialize())
         }
-        val gbc_btnQueue = GridBagConstraints()
-        gbc_btnQueue.insets = Insets(0, 0, 5, 5)
-        gbc_btnQueue.gridx = 2
-        gbc_btnQueue.gridy = 2
-        contentPane.add(btnQueue, gbc_btnQueue)
+        val queueBtnConstraints = GridBagConstraints()
+        queueBtnConstraints.insets = Insets(0, 0, 5, 5)
+        queueBtnConstraints.gridx = 2
+        queueBtnConstraints.gridy = 2
+        contentPane.add(queueBtn, queueBtnConstraints)
 
         val scrollPane = JScrollPane()
         val gbc_scrollPane = GridBagConstraints()
@@ -137,26 +138,13 @@ class LoanClientFrame : JFrame() {
         gbc_scrollPane.gridy = 4
         contentPane.add(scrollPane, gbc_scrollPane)
 
-        requestReplyList = JList<RequestReply<LoanRequest, LoanReply>>(listModel)
+        requestReplyList = JList<LoanReply>(listModel)
         scrollPane.setViewportView(requestReplyList)
-    }
 
-    /**
-     * This method returns the RequestReply line that belongs to the request from requestReplyList (JList).
-     * You can call this method when an reply arrives in order to add this reply to the right request in requestReplyList.
-     * @param request
-     * @return
-     */
-    private fun getRequestReply(request: LoanRequest): RequestReply<LoanRequest, LoanReply>? {
-
-        for (i in 0 until listModel.size) {
-            val rr = listModel.get(i)
-            if (rr.request === request) {
-                return rr
-            }
-        }
-
-        return null
+        this.loanReplyChannel.basicConsume(
+                LoanBrokerManager.LoanReplyChannel, true,
+                DeliverCallback { _, message -> listModel.addElement(deserialize<LoanReply>(message.body)) }
+                , null, null)
     }
 
     companion object {

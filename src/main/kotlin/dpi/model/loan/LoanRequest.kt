@@ -8,4 +8,4 @@ import java.io.Serializable
  * request that a client submits to get a loan.
  *
  */
-data class LoanRequest(val ssn:Int, val amount:Int, val time:Int, val loanReply: LoanReply? = null) : Serializable
+data class LoanRequest(val ssn: Int, val amount: Int, val time: Int, val clientRef: String) : Serializable

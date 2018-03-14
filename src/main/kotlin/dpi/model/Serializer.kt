@@ -1,4 +1,4 @@
-package dpi.requestreply
+package dpi.model
 
 import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream
 import java.io.ObjectInputStream
