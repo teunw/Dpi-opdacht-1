@@ -5,6 +5,7 @@ import com.rabbitmq.client.ConnectionFactory
 import com.rabbitmq.client.DeliverCallback
 import dpi.clients.loanbroker.LoanBrokerManager
 import dpi.model.bank.BankInterestReply
+import dpi.model.bank.BankInterestRequest
 import dpi.model.deserialize
 import dpi.model.serialize
 
@@ -12,7 +13,7 @@ class JMSBank {
     private val bankRequestChannel: Channel
     private val bankReplyChannel: Channel
 
-    val requestListeners = mutableListOf<JMSBankListener>()
+    val requestListeners = mutableListOf<(r: BankInterestRequest) -> Unit>()
 
     /**
      * Create the frame.
@@ -30,8 +31,8 @@ class JMSBank {
 
         this.bankRequestChannel.basicConsume(
                 LoanBrokerManager.BankRequestChannel, true,
-                DeliverCallback { consumerTag, message ->
-                    requestListeners.forEach { it.onInterestRequest(deserialize(message.body)) }
+                DeliverCallback { _, message ->
+                    requestListeners.forEach { it(deserialize(message.body)) }
                 }, null, null)
     }
 

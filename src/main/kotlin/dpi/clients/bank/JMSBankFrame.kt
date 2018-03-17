@@ -9,7 +9,7 @@ import java.awt.Insets
 import javax.swing.*
 import javax.swing.border.EmptyBorder
 
-class JMSBankFrame : JFrame(), JMSBankListener {
+class JMSBankFrame : JFrame() {
     private val contentPane: JPanel
     private val replyTextField: JTextField
     private val bankRequestList = DefaultListModel<BankInterestRequest>()
@@ -93,23 +93,11 @@ class JMSBankFrame : JFrame(), JMSBankListener {
         sendReplyButtonConstraints.gridy = 1
         contentPane.add(sendReplyButton, sendReplyButtonConstraints)
 
-        this.bank.requestListeners.add(this)
-    }
-
-    override fun onInterestRequest(bankRequest: BankInterestRequest) {
-        this.bankRequestList.addElement(bankRequest)
+        this.bank.requestListeners.add({ this.bankRequestList.addElement(it) })
     }
 
     companion object {
 
-        /**
-         *
-         */
-        private val serialVersionUID = 1L
-
-        /**
-         * Launch the application.
-         */
         @JvmStatic
         fun main(args: Array<String>) {
             EventQueue.invokeLater {
