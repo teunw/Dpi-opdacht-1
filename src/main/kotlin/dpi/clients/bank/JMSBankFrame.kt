@@ -73,19 +73,19 @@ class JMSBankFrame : JFrame() {
         val sendReplyButton = JButton("send reply")
         sendReplyButton.addActionListener {
             val bankRequest = list.selectedValue
-            val interest = replyTextField.text.toDoubleOrNull()
-            if (interest == null) {
-                println("Could not parse double")
-            } else {
-                val reply = BankInterestReply(interest, "ABN AMRO", bankRequest.brokenRef)
-                if (bankRequest != null) {
+            if (bankRequest != null) {
+                println("No value selected")
+                val interest = replyTextField.text.toDoubleOrNull()
+                if (interest == null) {
+                    println("Could not parse double")
+                } else {
+                    val reply = BankInterestReply(interest, "ABN AMRO", bankRequest.brokenRef)
                     list.repaint()
                     this.bank.sendInterestResponse(reply)
-                } else {
-                    println("No value selected")
                 }
+            } else {
+                println("No request found")
             }
-
         }
         val sendReplyButtonConstraints = GridBagConstraints()
         sendReplyButtonConstraints.anchor = GridBagConstraints.NORTHWEST

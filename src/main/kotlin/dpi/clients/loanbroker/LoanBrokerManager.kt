@@ -46,11 +46,14 @@ class LoanBrokerManager {
         this.loanRequestChannel.basicConsume(
                 LoanRequestChannel, true,
                 DeliverCallback { _, message ->
+
                     val loanRequest = deserialize<LoanRequest>(message.body)
                     val ref = UUID.randomUUID()
                     val bankInterestRequest = BankInterestRequest(loanRequest.amount, loanRequest.time, loanRequest.ssn, ref.toString())
+
                     this.loanRequests.add(BankLoanConnector(loanRequest, bankInterestRequest))
                     this.bankRequestChannel.basicPublish("", BankRequestChannel, null, bankInterestRequest.serialize())
+
                     println("Received - LoanRequest - $LoanRequestChannel - ${loanRequest.clientRef}")
                     println("Transmitted - BankRequest - $BankRequestChannel - $ref")
                 }, null, null)
@@ -61,7 +64,9 @@ class LoanBrokerManager {
                     val bankResponse = deserialize<BankInterestReply>(message.body)
                     val loanRequest = this.loanRequests.find { it.bankRef.brokenRef == bankResponse.brokerRef }
                     val loanReply = LoanReply(bankResponse.interest, bankResponse.quoteId, loanRequest?.loanRef?.clientRef!!)
+
                     this.loanReplyChannel.basicPublish("", LoanReplyChannel, null, loanReply.serialize())
+
                     println("Received - BankReply - $LoanReplyChannel - ${bankResponse.brokerRef}")
                     println("Transmitted - LoanReply - $LoanReplyChannel - ${loanRequest.loanRef}")
                 }, null, null
