@@ -3,6 +3,10 @@ package dpi.clients.loanbroker
 import com.rabbitmq.client.Channel
 import com.rabbitmq.client.ConnectionFactory
 import com.rabbitmq.client.DeliverCallback
+import dpi.clients.BankRequestChannel
+import dpi.clients.BankResponseChannel
+import dpi.clients.LoanReplyChannel
+import dpi.clients.LoanRequestChannel
 import dpi.model.BankLoanConnector
 import dpi.model.bank.BankInterestReply
 import dpi.model.bank.BankInterestRequest
@@ -11,10 +15,6 @@ import dpi.model.loan.LoanReply
 import dpi.model.loan.LoanRequest
 import dpi.model.serialize
 import java.util.*
-
-fun main(args: Array<String>) {
-    LoanBrokerManager()
-}
 
 class LoanBrokerManager {
 
@@ -74,9 +74,9 @@ class LoanBrokerManager {
     }
 
     companion object {
-        const val LoanRequestChannel = "LoanRequestQueue"
-        const val LoanReplyChannel = "LoanReplyQueue"
-        const val BankRequestChannel = "BankRequestChannel"
-        const val BankResponseChannel = "BankResponseChannel"
+
+        fun main(args: Array<String>) {
+            LoanBrokerManager()
+        }
     }
 }

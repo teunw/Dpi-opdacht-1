@@ -3,6 +3,8 @@ package dpi.clients.bank
 import com.rabbitmq.client.Channel
 import com.rabbitmq.client.ConnectionFactory
 import com.rabbitmq.client.DeliverCallback
+import dpi.clients.BankRequestChannel
+import dpi.clients.BankResponseChannel
 import dpi.clients.loanbroker.LoanBrokerManager
 import dpi.model.bank.BankInterestReply
 import dpi.model.bank.BankInterestRequest
@@ -24,19 +26,19 @@ class JMSBank {
         val rabbitMq = connectionFactory.newConnection()
 
         this.bankRequestChannel = rabbitMq.createChannel()
-        this.bankRequestChannel.queueDeclare(LoanBrokerManager.BankRequestChannel, false, false, false, null)
+        this.bankRequestChannel.queueDeclare(BankRequestChannel, false, false, false, null)
 
         this.bankReplyChannel = rabbitMq.createChannel()
-        this.bankReplyChannel.queueDeclare(LoanBrokerManager.BankResponseChannel, false, false, false, null)
+        this.bankReplyChannel.queueDeclare(BankResponseChannel, false, false, false, null)
 
         this.bankRequestChannel.basicConsume(
-                LoanBrokerManager.BankRequestChannel, true,
+                BankRequestChannel, true,
                 DeliverCallback { _, message ->
                     requestListeners.forEach { it(deserialize(message.body)) }
                 }, null, null)
     }
 
     fun sendInterestResponse(res: BankInterestReply) {
-        this.bankReplyChannel.basicPublish("", LoanBrokerManager.BankResponseChannel, null, res.serialize())
+        this.bankReplyChannel.basicPublish("", BankResponseChannel, null, res.serialize())
     }
 }

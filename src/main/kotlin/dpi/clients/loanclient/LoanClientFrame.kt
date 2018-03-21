@@ -3,6 +3,8 @@ package dpi.clients.loanclient
 import com.rabbitmq.client.Channel
 import com.rabbitmq.client.ConnectionFactory
 import com.rabbitmq.client.DeliverCallback
+import dpi.clients.LoanReplyChannel
+import dpi.clients.LoanRequestChannel
 import dpi.clients.loanbroker.LoanBrokerManager
 import dpi.model.deserialize
 import dpi.model.loan.LoanReply
@@ -41,10 +43,10 @@ class LoanClientFrame : JFrame() {
         val rabbitMq = connectionFactory.newConnection()
 
         this.loanRequestChannel = rabbitMq.createChannel()
-        this.loanRequestChannel.queueDeclare(LoanBrokerManager.LoanRequestChannel, false, false, false, null)
+        this.loanRequestChannel.queueDeclare(LoanRequestChannel, false, false, false, null)
 
         this.loanReplyChannel = rabbitMq.createChannel()
-        this.loanReplyChannel.queueDeclare(LoanBrokerManager.LoanReplyChannel, false, false, false, null)
+        this.loanReplyChannel.queueDeclare(LoanReplyChannel, false, false, false, null)
 
         title = "Loan Client"
 
@@ -121,7 +123,7 @@ class LoanClientFrame : JFrame() {
             val request = LoanRequest(ssn, amount, time, uuid.toString())
             this.ownRefs[uuid.toString()] = request
 
-            this.loanRequestChannel.basicPublish("", LoanBrokerManager.LoanRequestChannel, null, request.serialize())
+            this.loanRequestChannel.basicPublish("", LoanRequestChannel, null, request.serialize())
         }
         val queueBtnConstraints = GridBagConstraints()
         queueBtnConstraints.insets = Insets(0, 0, 5, 5)
@@ -142,7 +144,7 @@ class LoanClientFrame : JFrame() {
         scrollPane.setViewportView(requestReplyList)
 
         this.loanReplyChannel.basicConsume(
-                LoanBrokerManager.LoanReplyChannel, true,
+                LoanReplyChannel, true,
                 DeliverCallback { _, message -> listModel.addElement(deserialize<LoanReply>(message.body)) }
                 , null, null)
     }
